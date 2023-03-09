@@ -35,19 +35,43 @@ cmdclass = {}
 setup_requires = []
 
 if os.getenv("BUILD_CUDA_EXTENSIONS", "0") == "1":
-    from torch.utils.cpp_extension import BuildExtension, CUDAExtension
-
+    import torch
+    from torch.utils.cpp_extension import BuildExtension, CUDAExtension, CUDA_HOME, ROCM_HOME
+    is_rocm_pytorch = True if ((torch.version.hip is not None) and (ROCM_HOME is not None)) else False
+    if CUDA_HOME is None and ROCM_HOME is None:
+        raise RuntimeError(
+            f"Neither nvcc or hipcc were found.  Are you sure your environment has nvcc or hipcc available?  "
+            "If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, "
+            "only images whose names contain 'devel' will provide nvcc. "
+            "If you are using ROCm, please use rocm/pytorch:latest from "
+            "https://hub.docker.com/repository/docker/rocm/pytorch/general."
+        )
     setup_requires = ["ninja"]
+    nvcc_args_fused_adam = ["-O3", "--use_fast_math"]
+    #hipcc_args_fused_adam = ["-O3", "-ffast-math"]
+    hipcc_args_fused_adam = ["-O3"]
+    print("*****"*20, " is_rocm_pytorch", is_rocm_pytorch)
     extensions.extend(
         [
+            #CUDAExtension(
+            #    name="fairscale.fused_adam_cuda",
+            #    include_dirs=[os.path.join(this_dir, "fairscale/clib/fused_adam_cuda")],
+            #    sources=[
+            #        "fairscale/clib/fused_adam_cuda/fused_adam_cuda.cpp",
+            #        "fairscale/clib/fused_adam_cuda/fused_adam_cuda_kernel.cu",
+            #    ],
+            #    extra_compile_args={"cxx": ["-O3"],
+            #        "nvcc": nvcc_args_fused_adam if not is_rocm_pytorch else hipcc_args_fused_adam},
+            #)
             CUDAExtension(
                 name="fairscale.fused_adam_cuda",
-                include_dirs=[os.path.join(this_dir, "fairscale/clib/fused_adam_cuda")],
                 sources=[
-                    "fairscale/clib/fused_adam_cuda/fused_adam_cuda.cpp",
-                    "fairscale/clib/fused_adam_cuda/fused_adam_cuda_kernel.cu",
+                    "fairscale/clib/fused_adam_gpu/fused_adam_cuda.cpp",
+                    "fairscale/clib/fused_adam_gpu/fused_adam_cuda_kernel.cu",
                 ],
-                extra_compile_args={"cxx": ["-O3"], "nvcc": ["-O3", "--use_fast_math"]},
+                include_dirs=[os.path.join(this_dir, "fairscale/clib/fused_adam_gpu")],
+                extra_compile_args={"cxx": ["-O3"],
+                    "nvcc": nvcc_args_fused_adam if not is_rocm_pytorch else hipcc_args_fused_adam},
             )
         ]
     )
@@ -62,7 +86,7 @@ if __name__ == "__main__":
         version=find_version("fairscale/version.py"),
         setup_requires=setup_requires,
         install_requires=fetch_requirements(),
-        include_package_data=True,
+        include_package_data=False,
         packages=setuptools.find_packages(include=["fairscale*"]),  # Only include code within fairscale.
         ext_modules=extensions,
         cmdclass=cmdclass,
