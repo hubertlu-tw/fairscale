@@ -48,28 +48,16 @@ if os.getenv("BUILD_CUDA_EXTENSIONS", "0") == "1":
         )
     setup_requires = ["ninja"]
     nvcc_args_fused_adam = ["-O3", "--use_fast_math"]
-    #hipcc_args_fused_adam = ["-O3", "-ffast-math"]
-    hipcc_args_fused_adam = ["-O3"]
-    print("*****"*20, " is_rocm_pytorch", is_rocm_pytorch)
+    hipcc_args_fused_adam = ["-O3", "-ffast-math"]
     extensions.extend(
         [
-            #CUDAExtension(
-            #    name="fairscale.fused_adam_cuda",
-            #    include_dirs=[os.path.join(this_dir, "fairscale/clib/fused_adam_cuda")],
-            #    sources=[
-            #        "fairscale/clib/fused_adam_cuda/fused_adam_cuda.cpp",
-            #        "fairscale/clib/fused_adam_cuda/fused_adam_cuda_kernel.cu",
-            #    ],
-            #    extra_compile_args={"cxx": ["-O3"],
-            #        "nvcc": nvcc_args_fused_adam if not is_rocm_pytorch else hipcc_args_fused_adam},
-            #)
             CUDAExtension(
                 name="fairscale.fused_adam_cuda",
                 sources=[
-                    "fairscale/clib/fused_adam_gpu/fused_adam_cuda.cpp",
-                    "fairscale/clib/fused_adam_gpu/fused_adam_cuda_kernel.cu",
+                    "fairscale/clib/fused_adam/fused_adam_cuda.cpp",
+                    "fairscale/clib/fused_adam/fused_adam_cuda_kernel.cu",
                 ],
-                include_dirs=[os.path.join(this_dir, "fairscale/clib/fused_adam_gpu")],
+                include_dirs=[os.path.join(this_dir, "fairscale/clib/fused_adam")],
                 extra_compile_args={"cxx": ["-O3"],
                     "nvcc": nvcc_args_fused_adam if not is_rocm_pytorch else hipcc_args_fused_adam},
             )
